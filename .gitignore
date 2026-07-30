@@ -1,0 +1,17 @@
+# Build outputs
+.gradle/
+build/
+app/build/
+app/.cxx/
+local.properties
+
+# Downloaded dependencies (run scripts/fetch-deps.sh)
+deps/
+chocolate-doom/
+
+# Game data (copyrighted / large)
+wad/*.wad
+wad/*.zip
+
+# OS
+.DS_Store
