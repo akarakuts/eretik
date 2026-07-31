@@ -139,8 +139,11 @@ adb shell "run-as com.eretik.heretic sh -c 'mkdir -p files && cat /data/local/tm
 
 - **Не коммитьте** `heretic.wad` / `heretic1.wad` — коммерческие данные id Software;
   `wad/*.wad` уже в `.gitignore`. Свободная альтернатива для тестов — Blasphemer.
-- Crispy/Chocolate Doom — GPLv2 (см. `crispy-doom/COPYING.md`); SDL2, SDL2_mixer,
-  SDL2_net — zlib. Производные сборки должны соблюдать GPLv2.
+- Собственный код и приложение целиком — **GPL-2.0+** (текст лицензии — `COPYING`
+  в корне, заголовки — во всех своих `.java`/`.c`). Это требование движка:
+  Crispy/Chocolate Doom и код Heretic (id/Raven) под GPL-2.0+
+  (см. `crispy-doom/COPYING.md`); SDL2, SDL2_mixer, SDL2_net — zlib
+  (GPL-совместимая). Производные сборки должны соблюдать GPLv2.
 - Приложению нужны только разрешения `INTERNET` / `ACCESS_NETWORK_STATE` (сетевая
   игра) и `VIBRATE`; доступ к внешнему хранилищу не запрашивается — используется
   app-specific каталог `getExternalFilesDir()`.

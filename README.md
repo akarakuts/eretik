@@ -101,7 +101,13 @@ app/src/main/
 
 ## Лицензии
 
-- Crispy/Chocolate Doom — GPLv2 (см. `crispy-doom/COPYING.md`).
-- SDL2, SDL2_mixer, SDL2_net — zlib.
+Собственный код проекта и приложение целиком распространяются под
+**GNU GPL v2 или более поздней** (текст — в `COPYING`). Это требование
+лицензии движка: Crispy/Chocolate Doom и игровой код Heretic
+(id Software / Raven Software) опубликованы под GPL-2.0+.
+
+- Crispy/Chocolate Doom, код Heretic — GPL-2.0+ (см. `crispy-doom/COPYING.md`).
+- SDL2, SDL2_mixer, SDL2_net — zlib (GPL-совместимая).
 - Blasphemer — свободные ресурсы (см. его репозиторий).
-- Оригинальный `heretic.wad` — коммерческие данные, в репозиторий не входят.
+- Оригинальный `heretic.wad` — коммерческие данные id Software, в репозиторий
+  не входят и с приложением не распространяются.
