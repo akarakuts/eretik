@@ -3,12 +3,15 @@
 ## Обзор проекта
 
 **Eretik** — порт классической игры **Heretic** (Raven Software, 1994) на Android.
-Собран на базе [Chocolate Heretic](https://github.com/chocolate-doom/chocolate-doom)
-(максимально точного source port оригинального движка) и SDL2.
+Собран на базе [Crispy Heretic](https://github.com/fabiangreffrath/crispy-doom)
+(форк Chocolate Heretic с high-res рендером 640×400, truecolor и uncapped FPS)
+и SDL2. Truecolor включён на этапе компиляции (`-DCRISPY_TRUECOLOR` в
+`app/src/main/jni/heretic/Android.mk`); `crispy_hires` / `crispy_truecolor`
+включаются в `default.cfg` / `extra.cfg`.
 
 Репозиторий — это по сути тонкая Android-обвязка: свой код — один Gradle-модуль `app`
 с Java-активностью и тач-контролями, а весь движок собирается из исходников
-chocolate-doom через ndk-build.
+crispy-doom через ndk-build.
 
 Основной язык документации проекта — русский; комментарии в Java/C-коде — английские
 (следуйте этому разделению при правках).
@@ -17,7 +20,7 @@ chocolate-doom через ndk-build.
 
 | Компонент | Версия | Назначение |
 |---|---|---|
-| chocolate-doom | git master (shallow clone) | движок (`chocolate-heretic`), C |
+| crispy-doom | git master (shallow clone) | движок (`crispy-heretic`), C |
 | SDL2 | 2.32.10 | видео, ввод, аудио |
 | SDL2_mixer | 2.8.1 | звуковые эффекты (только WAV; музыка — через OPL) |
 | SDL2_net | 2.2.0 | сетевая игра |
@@ -52,23 +55,25 @@ app/src/main/
 └── jni/                             # нативная сборка (ndk-build)
     ├── Android.mk                   # верхнеуровневый makefile, конфиг кодеков SDL2_mixer (WAV only)
     ├── Application.mk               # ABI, APP_PLATFORM=android-21, 16KB alignment, -O2
-    ├── config/config.h              # рукописная замена autotools-заголовку для chocolate-heretic
-    ├── heretic/Android.mk           # модуль libheretic.so: движок + src/heretic + textscreen + OPL + pcsound
+    ├── config/config.h              # рукописная замена autotools-заголовку для crispy-heretic
+    ├── heretic/Android.mk           # модуль libheretic.so: движок + src/heretic + textscreen + OPL + pcsound + render_smooth.c
     ├── SDL, SDL2_mixer, SDL2_net    # симлинки на deps/ (создаются fetch-deps.sh)
-    └── chocolate-doom               # симлинк на ./chocolate-doom
-chocolate-doom/                      # клон исходников движка (в .gitignore, НЕ редактируется)
+    └── crispy-doom                  # симлинк на ./crispy-doom
+crispy-doom/                         # клон исходников движка (в .gitignore, НЕ редактируется)
 deps/                                # распакованные тарболы SDL2 (в .gitignore)
 wad/                                 # игровые WAD-файлы для тестов (в .gitignore, кроме самого каталога)
-scripts/fetch-deps.sh                # скачивание chocolate-doom и SDL2, создание симлинков
+scripts/fetch-deps.sh                # скачивание crispy-doom и SDL2, создание симлинков
 docs/                                # скриншоты для README
 ```
 
 Как собирается нативная часть: `jni/heretic/Android.mk` берёт `wildcard` по
-`chocolate-doom/src/*.c` (исключая `d_dedicated.c`, `i_winmusic.c`,
+`crispy-doom/src/*.c` (исключая `d_dedicated.c`, `i_winmusic.c`,
 `w_file_win32.c`, `z_native.c`), `src/heretic/*.c`, `textscreen/*.c`, плюс явный
 список файлов OPL и pcsound, и линкует всё в `libheretic.so` вместе с
 `SDL2`, `SDL2_mixer`, `SDL2_net`. Порядок загрузки библиотек задан в
-`HereticActivity.getLibraries()`.
+`HereticActivity.getLibraries()`. Свой `jni/heretic/render_smooth.c` форсирует
+билинейную фильтрацию при масштабировании (`SDL_HINT_OVERRIDE` на
+`SDL_RENDER_SCALE_QUALITY=linear`).
 
 ## Сборка и запуск
 
@@ -76,12 +81,12 @@ docs/                                # скриншоты для README
 `local.properties` с `sdk.dir=...`.
 
 ```bash
-scripts/fetch-deps.sh        # однократно: клонирует chocolate-doom, качает SDL2, создаёт симлинки
+scripts/fetch-deps.sh        # однократно: клонирует crispy-doom, качает SDL2, создаёт симлинки
 ./gradlew assembleDebug      # сборка APK → app/build/outputs/apk/debug/app-debug.apk
 ./gradlew installDebug       # установка на подключённое устройство/эмулятор
 ```
 
-`deps/`, `chocolate-doom/` и `wad/*.wad` находятся в `.gitignore` — после чистого
+`deps/`, `crispy-doom/` и `wad/*.wad` находятся в `.gitignore` — после чистого
 клона обязательно запустите `scripts/fetch-deps.sh`.
 
 ### Установка IWAD (игровых данных)
@@ -102,6 +107,10 @@ adb shell "run-as com.eretik.heretic sh -c 'mkdir -p files && cat /data/local/tm
 
 Движку передаются аргументы `-iwad`, `-config` (`default.cfg`), `-extraconfig`
 (`extra.cfg`), `-savedir` (`savegames/`) — всё во внутреннем хранилище приложения.
+В `default.cfg` дописаны `crispy_hires 1` и `crispy_truecolor 1` — high-res
+рендер 640×400 и truecolor; crispy-heretic биндит эти переменные в
+`src/heretic/d_main.c` и пересохраняет их при выходе. Там же можно включить
+`crispy_uncapped 1` (анкапнутый FPS), `crispy_freelook`, `crispy_widescreen`.
 
 ## Соглашения по коду
 
@@ -110,7 +119,7 @@ adb shell "run-as com.eretik.heretic sh -c 'mkdir -p files && cat /data/local/tm
   `SDLActivity.getContentView()` и эмулируют клавиатуру через `KeyEvent` —
   движок не модифицирован под тач, все изменения управления делаются на
   Java-стороне через SDL key events.
-- **Не редактируйте** файлы в `chocolate-doom/`, `deps/` и
+- **Не редактируйте** файлы в `crispy-doom/`, `deps/` и
   `app/src/main/java/org/libsdl/app/` — это внешние исходники, обновляемые
   целиком. Изменения в них будут потеряны при переустановке зависимостей.
 - Изменения в составе нативной сборки (новые файлы движка, кодеки mixer) — только
@@ -123,14 +132,14 @@ adb shell "run-as com.eretik.heretic sh -c 'mkdir -p files && cat /data/local/tm
 Автотестов нет: каталоги `app/src/test` и `app/src/androidTest` отсутствуют,
 тестовые зависимости в `libs.versions.toml` объявлены, но не подключены.
 Проверка изменений — ручная: `./gradlew assembleDebug` + запуск на устройстве/
-эмуляторе с установленным IWAD. В upstream-репозитории chocolate-doom есть свой
+эмуляторе с установленным IWAD. В upstream-репозитории crispy-doom есть свой
 тестовый стенд (`quickcheck/`), но он к Android-сборке не подключён.
 
 ## Безопасность и лицензии
 
 - **Не коммитьте** `heretic.wad` / `heretic1.wad` — коммерческие данные id Software;
   `wad/*.wad` уже в `.gitignore`. Свободная альтернатива для тестов — Blasphemer.
-- Chocolate Doom/Heretic — GPLv2 (см. `chocolate-doom/COPYING.md`); SDL2, SDL2_mixer,
+- Crispy/Chocolate Doom — GPLv2 (см. `crispy-doom/COPYING.md`); SDL2, SDL2_mixer,
   SDL2_net — zlib. Производные сборки должны соблюдать GPLv2.
 - Приложению нужны только разрешения `INTERNET` / `ACCESS_NETWORK_STATE` (сетевая
   игра) и `VIBRATE`; доступ к внешнему хранилищу не запрашивается — используется

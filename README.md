@@ -1,8 +1,9 @@
 # Eretik — порт Heretic на Android
 
 Порт классической игры **Heretic** (Raven Software, 1994) на Android на базе
-[Chocolate Heretic](https://github.com/chocolate-doom/chocolate-doom) —
-максимально точного source port оригинального движка — и SDL2.
+[Crispy Heretic](https://github.com/fabiangreffrath/crispy-doom) —
+форка Chocolate Heretic с high-res рендером 640×400, truecolor и uncapped FPS —
+и SDL2.
 
 ![Скриншот](docs/screenshot-demo.png)
 
@@ -10,7 +11,7 @@
 
 | Компонент | Версия | Назначение |
 |---|---|---|
-| chocolate-doom | git master | движок (`chocolate-heretic`) |
+| crispy-doom | git master | движок (`crispy-heretic`) |
 | SDL2 | 2.32.10 | видео, ввод, аудио |
 | SDL2_mixer | 2.8.1 | звуковые эффекты (WAV) |
 | SDL2_net | 2.2.0 | сетевая игра |
@@ -61,7 +62,7 @@
 ## Управление
 
 Есть экранные контролы (оверлей поверх игры), а также работают клавиатура,
-мышь и геймпад — как в обычном Chocolate Heretic.
+мышь и геймпад — как в обычном Crispy Heretic.
 
 - **Джойстик** (слева внизу): движение вперёд/назад, повороты; диагонали
   нажимают две клавиши сразу, как на клавиатуре
@@ -90,17 +91,17 @@ app/src/main/
 └── jni/
     ├── Android.mk                 # верхнеуровневый ndk-build
     ├── Application.mk             # ABI, APP_PLATFORM, 16KB alignment
-    ├── config/config.h            # конфиг для chocolate-heretic
-    ├── heretic/Android.mk         # модуль libheretic.so (списки исходников)
+    ├── config/config.h            # конфиг для crispy-heretic
+    ├── heretic/Android.mk         # модуль libheretic.so (списки исходников + render_smooth.c)
     ├── SDL -> deps/SDL2-2.32.10
     ├── SDL2_mixer -> deps/SDL2_mixer-2.8.1
     ├── SDL2_net -> deps/SDL2_net-2.2.0
-    └── chocolate-doom -> ../chocolate-doom
+    └── crispy-doom -> ../crispy-doom
 ```
 
 ## Лицензии
 
-- Chocolate Doom / Heretic — GPLv2 (см. `chocolate-doom/COPYING`).
+- Crispy/Chocolate Doom — GPLv2 (см. `crispy-doom/COPYING.md`).
 - SDL2, SDL2_mixer, SDL2_net — zlib.
 - Blasphemer — свободные ресурсы (см. его репозиторий).
 - Оригинальный `heretic.wad` — коммерческие данные, в репозиторий не входят.

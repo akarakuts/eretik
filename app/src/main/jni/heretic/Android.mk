@@ -1,6 +1,6 @@
 LOCAL_PATH := $(call my-dir)
 
-CHOC := $(LOCAL_PATH)/../chocolate-doom
+CHOC := $(LOCAL_PATH)/../crispy-doom
 
 include $(CLEAR_VARS)
 
@@ -42,9 +42,10 @@ PCS_SRC := \
     $(CHOC)/pcsound/pcsound.c \
     $(CHOC)/pcsound/pcsound_sdl.c
 
-LOCAL_SRC_FILES := $(ENGINE_SRC) $(GAME_SRC) $(TXT_SRC) $(OPL_SRC) $(PCS_SRC)
+LOCAL_SRC_FILES := $(ENGINE_SRC) $(GAME_SRC) $(TXT_SRC) $(OPL_SRC) $(PCS_SRC) \
+    render_smooth.c
 
-LOCAL_CFLAGS := -O2 -Wno-unused -Wno-pointer-sign
+LOCAL_CFLAGS := -O2 -Wno-unused -Wno-pointer-sign -DCRISPY_TRUECOLOR
 
 LOCAL_SHARED_LIBRARIES := SDL2 SDL2_mixer SDL2_net
 

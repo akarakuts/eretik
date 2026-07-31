@@ -8,6 +8,7 @@ local.properties
 # Downloaded dependencies (run scripts/fetch-deps.sh)
 deps/
 chocolate-doom/
+crispy-doom/
 
 # Game data (copyrighted / large)
 wad/*.wad
