@@ -40,11 +40,13 @@ AndroidX не используется (`android.useAndroidX=false` в `gradle.p
 ```
 app/src/main/
 ├── AndroidManifest.xml              # activity (landscape, singleInstance), разрешения INTERNET/VIBRATE
-├── java/com/eretik/heretic/         # свой код приложения (~560 строк Java)
-│   ├── HereticActivity.java         # SDLActivity: список .so, аргументы движка, поиск/копирование IWAD
-│   ├── TouchControls.java           # построение экранного оверлея управления
+├── java/com/eretik/heretic/         # свой код приложения (~670 строк Java)
+│   ├── HereticActivity.java         # SDLActivity: список .so, аргументы движка
+│   ├── IwadLocator.java             # поиск/импорт IWAD (приоритет: heretic → heretic1 → blasphem)
+│   ├── TouchControls.java           # декларативная раскладка экранного оверлея управления
 │   ├── JoystickView.java            # виртуальный 8-сторонний джойстик (шлёт SDL key events)
-│   └── KeyButtonView.java           # круглые кнопки: режимы HOLD / TOGGLE / TAP
+│   ├── KeyButtonView.java           # круглые кнопки: enum Mode { HOLD / TOGGLE / TAP }, хаптика
+│   └── OverlayStyle.java            # общие цвета/кисти оверлея
 ├── java/org/libsdl/app/             # вендорная Java-обвязка SDL2 (не править без нужды)
 ├── res/values/                      # strings (app_name = "Heretic"), styles, colors
 └── jni/                             # нативная сборка (ndk-build)

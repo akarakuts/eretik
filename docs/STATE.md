@@ -34,21 +34,38 @@
 
 ## Открытые проблемы (текущая отладка)
 
-### BUG-1: краш меню с shareware heretic1.wad
-- WAD: `wad/heretic1.wad` (= `heretic_share.wad` из PSP-сборки `heretic-0.2.zip`,
-  archive.org item `heretic-0.2.7z`, 5 120 920 байт, 1374 lumps).
-- Симптом: титульник показывается; через ~11 c тап по ESC (открытие меню) →
-  SIGSEGV (SEGV_ACCERR, запись) в `V_DrawPatch` (v_video.c:183) ← `MN_DrTextB`
-  (mn_menu.c:405) ← `D_Display` (d_main.c:199). Адреса декодированы
-  `llvm-addr2line` по `app/build/intermediates/cxx/Debug/48o1d555/obj/local/arm64-v8a/libheretic.so`.
-- **Уже исключено** (проверено скриптом): лампы M_HTIC, M_SKL00 валидны;
-  все 95 символов FONTA/FONTB валидны; TITLE/CREDIT/HELP1/HELP2 — raw 64000 (норма
-  для Heretic); лампа DEHACKED нет. С blasphem.wad то же меню работает.
-- Гипотезы: (а) PSP-рип WAD тонко модифицирован — сверить с каноническим
-  shareware heretic1.wad из `htic_v12.zip` (нужен DOS/DEICE, напр. DOSBox);
-  (б) баг проявляется только в gamemode=shareware (код MN_* в shareware-ветках);
-  (в) Android-специфика (стек/выравнивание) — проверить, собрав chocolate-heretic
-  нативно для macOS/Linux с тем же WAD.
+### BUG-1: РЕШЁН — краш меню был вызван битым heretic1.wad
+- Старый WAD (PSP-рип `heretic_share.wad`, md5 `c0a132a4d5cc1842c99ac7245539ab7b`)
+  отличался от канонического shareware v1.2 ровно на 15 байт, из них ~10 — в хвосте
+  глифа **FONTB46 ('N')**: в последней колонке (col12) пост-лист не заканчивался
+  байтом-терминатором `0xFF`. `V_DrawPatch` шёл по постам за пределы лампы,
+  читал мусор из зонной памяти как topdelta/length и писал далеко за пределы
+  экранного буфера (в конец 32-МБ zone) → SIGSEGV на Android.
+- **Фикс**: `wad/heretic1.wad` заменён на канонический shareware v1.2
+  (md5 `ae779722390ec32fa37b0d361f7d82f8`, 5 120 920 байт — сверено с Doom Wiki /
+  libretro-database; источник: github.com/Akbar30Bill/DOOM_wads). Битый рип сохранён
+  как `wad/heretic1.wad.psp-rip-broken`.
+- **Проверка**: нативная repro-сборка (см. ниже) с ASan: на битом WAD —
+  `heap-buffer-overflow v_video.c:183 V_DrawPatch ← MN_DrTextB` (та же строка, что
+  в tombstone); на каноническом — чисто, меню открыто, 120 кадров без ошибок.
+  На эмуляторе (heretic_test): ESC на ~14 c → меню открывается, краша нет
+  (скриншот проверен визуально).
+- Побочная находка (не наш баг, живёт в upstream chocolate-doom):
+  `S_StartSound` на титульнике читает поле `mobj_t.player` у `degenmobj_t`
+  dummy-listener (global-buffer-overflow *read*, безвредное — ASan ловит как
+  `s_sound.c S_StartSound` из `MN_ActivateMenu`). Можно зарепортить в chocolate-doom.
+
+### Нативная repro-площадка (build/native-repro/, в .gitignore)
+- `build.sh` — собирает chocolate-heretic из тех же исходников, что
+  `jni/heretic/Android.mk` (+SDL2_mixer WAV-only, SDL2_net из `deps/`), компилятором
+  clang с `-fsanitize=address,recover`, линкует brew `sdl2-compat`.
+  Требуется `pkg-config sdl2` (sdl2-compat + sdl3 из Homebrew).
+- `d_main_patched.c` — копия `src/heretic/d_main.c` с автотриггером: на тике 280
+  `MN_ActivateMenu()`, на тике 400 пишет `repro_result.txt` и `exit(42)`.
+- Запуск headless:
+  `cd build/native-repro/run && DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy ASAN_OPTIONS=halt_on_error=0 ../chocolate-heretic -iwad ../../../wad/heretic1.wad -config default.cfg -extraconfig extra.cfg -savedir .`
+  (без `DYLD_FALLBACK_LIBRARY_PATH` sdl2-compat не находит libSDL3 и висит
+  в модальном NSAlert до main).
 
 ### BUG-2: Blasphemer + демо → I_Error "R_FindPlane: no more visplanes"
 - Демо-лупы Blasphemer (ZDoom-семейство) десинхронизируются в vanilla-лимитах
@@ -76,7 +93,8 @@
 
 ## Ближайшие шаги
 
-1. BUG-1: воспроизвести нативно (macOS: собрать chocolate-doom через cmake/autotools
-   с `wad/heretic1.wad`) или сравнить с каноническим shareware WAD.
-2. Обновить README (сделано ниже) и закоммитить.
-3. Опционально: release-сборка с подписью, иконка приложения вместо дефолтной SDL.
+1. ~~BUG-1~~ — решён (битый WAD, см. выше). BUG-2 при желании: посмотреть
+   повторный SIGSEGV внутри I_Error после диалога.
+2. Опционально: release-сборка с подписью, иконка приложения вместо дефолтной SDL.
+3. Опционально: отправить в upstream chocolate-doom репорт про OOB-read
+   в `S_StartSound` (dummy listener на титульнике).

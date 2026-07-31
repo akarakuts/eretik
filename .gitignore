@@ -15,3 +15,6 @@ wad/*.zip
 
 # OS
 .DS_Store
+
+# Diagnosis artifacts
+wad/*.psp-rip-broken

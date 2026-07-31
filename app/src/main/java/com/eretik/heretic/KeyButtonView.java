@@ -3,94 +3,92 @@ package com.eretik.heretic;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Paint;
-import android.graphics.Rect;
+import android.view.HapticFeedbackConstants;
 import android.view.MotionEvent;
 import android.view.View;
 
 import org.libsdl.app.SDLActivity;
 
 /**
- * Round translucent on-screen button that emits an SDL key event.
- * Modes:
- *  - HOLD:   key down while finger is down (fire, use, fly...)
- *  - TOGGLE: each tap flips the key state (run, strafe-latch)
- *  - TAP:    short press-release pulse (weapon cycle, menu keys)
+ * Round translucent on-screen button that emits SDL key events.
+ * Behavior depends on {@link Mode}: held key, latched key or a short pulse.
  */
 public class KeyButtonView extends View {
 
-    public static final int MODE_HOLD = 0;
-    public static final int MODE_TOGGLE = 1;
-    public static final int MODE_TAP = 2;
+    public enum Mode {
+        /** Key down while the finger is down (fire, use, fly...). */
+        HOLD,
+        /** Each tap flips the key state (run, strafe-latch). */
+        TOGGLE,
+        /** Short press-release pulse (weapon cycle, menu keys). */
+        TAP
+    }
 
     public interface Listener {
         void onToggled(KeyButtonView button, boolean active);
     }
 
-    private final Paint fillPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint borderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Rect textBounds = new Rect();
+    /** Duration of the key press emitted in TAP mode. */
+    private static final long TAP_PULSE_MS = 90;
+    /** Labels longer than this are drawn with the smaller font scale. */
+    private static final int SHORT_LABEL_MAX_LENGTH = 2;
+    private static final float LONG_LABEL_SCALE = 0.55f;
+    private static final float SHORT_LABEL_SCALE = 0.8f;
 
-    private final int mode;
-    private int keyCode;
-    private int[] keyCycle;          // for MODE_TAP with cycling (weapons)
-    private int cycleIndex = 0;
+    private final Paint fillPaint = OverlayStyle.fillPaint();
+    private final Paint borderPaint = OverlayStyle.strokePaint();
+    private final Paint textPaint = OverlayStyle.textPaint();
+
+    private final Mode mode;
+    private final String label;
+    private final int keyCode;
+    private final int[] keyCycle;   // TAP with cycling (weapons), null otherwise
+    private int cycleIndex;
     private boolean active;
     private boolean fingerDown;
     private Listener listener;
 
-    public KeyButtonView(Context context, String label, int mode, int keyCode) {
+    /** Button emitting a single key code (a negative keyCode means a pure latch). */
+    public KeyButtonView(Context context, String label, Mode mode, int keyCode) {
+        this(context, label, mode, keyCode, null);
+    }
+
+    /** TAP-mode button cycling through the given key codes (weapon selection). */
+    public KeyButtonView(Context context, String label, int[] keyCycle) {
+        this(context, label, Mode.TAP, -1, keyCycle.clone());
+    }
+
+    private KeyButtonView(Context context, String label, Mode mode, int keyCode, int[] keyCycle) {
         super(context);
+        this.label = label;
         this.mode = mode;
         this.keyCode = keyCode;
-        init(label);
-    }
-
-    public KeyButtonView(Context context, String label, int[] keyCycle) {
-        super(context);
-        this.mode = MODE_TAP;
         this.keyCycle = keyCycle;
-        init(label);
-    }
-
-    private void init(String label) {
-        fillPaint.setStyle(Paint.Style.FILL);
-        fillPaint.setColor(0x30FFFFFF);
-        borderPaint.setStyle(Paint.Style.STROKE);
-        borderPaint.setStrokeWidth(3f);
-        borderPaint.setColor(0x60FFFFFF);
-        textPaint.setColor(0xB0FFFFFF);
-        textPaint.setTextAlign(Paint.Align.CENTER);
-        textPaint.setFakeBoldText(true);
-        setTag(label);
     }
 
     public void setListener(Listener listener) {
         this.listener = listener;
     }
 
-    public boolean isLatched() {
-        return active;
-    }
-
-    private String label() {
-        Object tag = getTag();
-        return tag == null ? "" : tag.toString();
-    }
-
     @Override
     protected void onDraw(Canvas canvas) {
-        float cx = getWidth() / 2f, cy = getHeight() / 2f;
+        float cx = getWidth() / 2f;
+        float cy = getHeight() / 2f;
         float r = Math.min(cx, cy) - 2;
 
-        fillPaint.setColor(fingerDown ? 0x50FFC080 : (active ? 0x5080C0FF : 0x30FFFFFF));
+        fillPaint.setColor(fingerDown ? OverlayStyle.COLOR_FILL_PRESSED
+                : active ? OverlayStyle.COLOR_FILL_LATCHED
+                : OverlayStyle.COLOR_FILL_IDLE);
+        borderPaint.setStrokeWidth(fingerDown ? OverlayStyle.BORDER_WIDTH_PRESSED
+                : OverlayStyle.BORDER_WIDTH_IDLE);
         canvas.drawCircle(cx, cy, r, fillPaint);
         canvas.drawCircle(cx, cy, r, borderPaint);
 
-        String label = label();
-        textPaint.setTextSize(r * (label.length() > 2 ? 0.55f : 0.8f));
-        textPaint.getTextBounds(label, 0, label.length(), textBounds);
-        canvas.drawText(label, cx, cy + textBounds.height() / 2f, textPaint);
+        float scale = label.length() > SHORT_LABEL_MAX_LENGTH
+                ? LONG_LABEL_SCALE : SHORT_LABEL_SCALE;
+        textPaint.setTextSize(r * scale);
+        Paint.FontMetrics metrics = textPaint.getFontMetrics();
+        canvas.drawText(label, cx, cy - (metrics.ascent + metrics.descent) / 2f, textPaint);
     }
 
     @Override
@@ -98,6 +96,7 @@ public class KeyButtonView extends View {
         switch (event.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
                 fingerDown = true;
+                performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
                 onPress();
                 invalidate();
                 return true;
@@ -108,16 +107,20 @@ public class KeyButtonView extends View {
                 onRelease();
                 invalidate();
                 return true;
+
+            default:
+                return super.onTouchEvent(event);
         }
-        return super.onTouchEvent(event);
     }
 
     private void onPress() {
         switch (mode) {
-            case MODE_HOLD:
-                if (keyCode >= 0) SDLActivity.onNativeKeyDown(keyCode);
+            case HOLD:
+                if (keyCode >= 0) {
+                    SDLActivity.onNativeKeyDown(keyCode);
+                }
                 break;
-            case MODE_TOGGLE:
+            case TOGGLE:
                 active = !active;
                 if (keyCode >= 0) {
                     if (active) {
@@ -130,10 +133,10 @@ public class KeyButtonView extends View {
                     listener.onToggled(this, active);
                 }
                 break;
-            case MODE_TAP:
+            case TAP:
                 int key = keyCycle != null ? keyCycle[cycleIndex] : keyCode;
                 SDLActivity.onNativeKeyDown(key);
-                postDelayed(() -> SDLActivity.onNativeKeyUp(key), 90);
+                postDelayed(() -> SDLActivity.onNativeKeyUp(key), TAP_PULSE_MS);
                 if (keyCycle != null) {
                     cycleIndex = (cycleIndex + 1) % keyCycle.length;
                 }
@@ -142,7 +145,7 @@ public class KeyButtonView extends View {
     }
 
     private void onRelease() {
-        if (mode == MODE_HOLD && keyCode >= 0) {
+        if (mode == Mode.HOLD && keyCode >= 0) {
             SDLActivity.onNativeKeyUp(keyCode);
         }
     }

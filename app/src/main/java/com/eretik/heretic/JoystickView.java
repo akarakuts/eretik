@@ -20,11 +20,19 @@ import java.util.Set;
  */
 public class JoystickView extends View {
 
+    /** Fraction of the radius the stick must travel before a direction engages. */
     private static final float DEADZONE = 0.28f;
+    /** Knob radius relative to the base radius. */
+    private static final float KNOB_RATIO = 0.38f;
+    /** Direction guide ticks around the base (one per emulated direction). */
+    private static final int TICK_COUNT = 8;
+    /** Tick endpoints relative to the base radius. */
+    private static final float TICK_INNER_RATIO = 0.86f;
+    private static final float TICK_OUTER_RATIO = 0.96f;
 
-    private final Paint basePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint borderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint knobPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint basePaint = OverlayStyle.fillPaint();
+    private final Paint borderPaint = OverlayStyle.strokePaint();
+    private final Paint knobPaint = OverlayStyle.fillPaint();
 
     private int trackedPointer = -1;
     private float touchX, touchY;      // relative to center, clamped to radius
@@ -35,19 +43,12 @@ public class JoystickView extends View {
 
     public JoystickView(Context context) {
         super(context);
-        basePaint.setStyle(Paint.Style.FILL);
-        basePaint.setColor(0x30FFFFFF);
-        borderPaint.setStyle(Paint.Style.STROKE);
-        borderPaint.setStrokeWidth(3f);
-        borderPaint.setColor(0x60FFFFFF);
-        knobPaint.setStyle(Paint.Style.FILL);
-        knobPaint.setColor(0x50FFFFFF);
     }
 
     public void setStrafeMode(boolean strafeMode) {
         if (this.strafeMode != strafeMode) {
             this.strafeMode = strafeMode;
-            // Re-evaluate currently pressed direction with the new mapping.
+            // Re-evaluate the currently held direction with the new mapping.
             updateKeys(normalizedX(), normalizedY());
         }
     }
@@ -60,12 +61,27 @@ public class JoystickView extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         float r = radius();
-        float cx = getWidth() / 2f, cy = getHeight() / 2f;
+        float cx = getWidth() / 2f;
+        float cy = getHeight() / 2f;
+
         canvas.drawCircle(cx, cy, r - 2, basePaint);
         canvas.drawCircle(cx, cy, r - 2, borderPaint);
-        float knobR = r * 0.38f;
+        drawDirectionTicks(canvas, cx, cy, r);
+
+        float knobR = r * KNOB_RATIO;
         canvas.drawCircle(cx + touchX, cy + touchY, knobR, knobPaint);
         canvas.drawCircle(cx + touchX, cy + touchY, knobR, borderPaint);
+    }
+
+    private void drawDirectionTicks(Canvas canvas, float cx, float cy, float r) {
+        for (int i = 0; i < TICK_COUNT; i++) {
+            double angle = i * (2 * Math.PI / TICK_COUNT);
+            float cos = (float) Math.cos(angle);
+            float sin = (float) Math.sin(angle);
+            canvas.drawLine(cx + cos * r * TICK_INNER_RATIO, cy + sin * r * TICK_INNER_RATIO,
+                    cx + cos * r * TICK_OUTER_RATIO, cy + sin * r * TICK_OUTER_RATIO,
+                    borderPaint);
+        }
     }
 
     @Override
@@ -100,31 +116,27 @@ public class JoystickView extends View {
 
             case MotionEvent.ACTION_POINTER_UP:
                 if (event.getPointerId(index) == trackedPointer) {
-                    releaseAll();
-                    active = false;
-                    trackedPointer = -1;
-                    touchX = touchY = 0;
-                    invalidate();
+                    releaseStick();
                 }
                 return true;
 
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL:
                 if (trackedPointer == -1 || event.getPointerId(index) == trackedPointer) {
-                    releaseAll();
-                    active = false;
-                    trackedPointer = -1;
-                    touchX = touchY = 0;
-                    invalidate();
+                    releaseStick();
                 }
                 return true;
+
+            default:
+                return super.onTouchEvent(event);
         }
-        return super.onTouchEvent(event);
     }
 
     private void handleMove(float x, float y) {
-        float cx = getWidth() / 2f, cy = getHeight() / 2f;
-        float dx = x - cx, dy = y - cy;
+        float cx = getWidth() / 2f;
+        float cy = getHeight() / 2f;
+        float dx = x - cx;
+        float dy = y - cy;
         float r = radius();
         float len = (float) Math.sqrt(dx * dx + dy * dy);
         if (len > r) {
@@ -137,13 +149,33 @@ public class JoystickView extends View {
         updateKeys(dx / r, dy / r);
     }
 
+    private void releaseStick() {
+        releaseAllKeys();
+        active = false;
+        trackedPointer = -1;
+        touchX = touchY = 0;
+        invalidate();
+    }
+
     private void updateKeys(float nx, float ny) {
-        Set<Integer> wanted = new HashSet<>();
+        Set<Integer> wanted = new HashSet<>(4);
         if (ny < -DEADZONE) wanted.add(KeyEvent.KEYCODE_DPAD_UP);
         if (ny > DEADZONE)  wanted.add(KeyEvent.KEYCODE_DPAD_DOWN);
-        if (nx < -DEADZONE) wanted.add(strafeMode ? KeyEvent.KEYCODE_COMMA  : KeyEvent.KEYCODE_DPAD_LEFT);
-        if (nx > DEADZONE)  wanted.add(strafeMode ? KeyEvent.KEYCODE_PERIOD : KeyEvent.KEYCODE_DPAD_RIGHT);
+        if (nx < -DEADZONE) wanted.add(horizontalKey(true));
+        if (nx > DEADZONE)  wanted.add(horizontalKey(false));
+        syncKeys(wanted);
+    }
 
+    /** Key emitted for horizontal deflection: strafe keys when latched, turn keys otherwise. */
+    private int horizontalKey(boolean left) {
+        if (strafeMode) {
+            return left ? KeyEvent.KEYCODE_COMMA : KeyEvent.KEYCODE_PERIOD;
+        }
+        return left ? KeyEvent.KEYCODE_DPAD_LEFT : KeyEvent.KEYCODE_DPAD_RIGHT;
+    }
+
+    /** Diffs the wanted key set against the pressed one and emits SDL events. */
+    private void syncKeys(Set<Integer> wanted) {
         for (Integer key : pressedKeys) {
             if (!wanted.contains(key)) {
                 SDLActivity.onNativeKeyUp(key);
@@ -158,7 +190,7 @@ public class JoystickView extends View {
         pressedKeys.addAll(wanted);
     }
 
-    private void releaseAll() {
+    private void releaseAllKeys() {
         for (Integer key : pressedKeys) {
             SDLActivity.onNativeKeyUp(key);
         }
