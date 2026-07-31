@@ -13,11 +13,13 @@ import com.eretik.heretic.KeyButtonView.Mode;
 /**
  * Builds the on-screen touch-control overlay on top of the SDL surface.
  *
- * Layout (landscape):
- *   top-left:   RUN (toggle shift), STR (toggle strafe-latch for the stick)
- *   top-right:  ESC, MAP, WPN (cycle 1-7) / ], [, ART (enter)
- *   bottom-left:  virtual 8-way joystick (move/turn/strafe)
- *   bottom-right: FIRE (ctrl), USE (space), FLY up (pgup), FLY down (ins)
+ * Layout (landscape, two-thumb scheme):
+ *   bottom-left:  virtual 8-way joystick, with RUN (toggle shift) and STR
+ *                 (toggle strafe-latch) directly above it, in left-thumb reach
+ *   bottom-right: big FIRE (ctrl) with USE (space) above it; F+ (pgup) and
+ *                 F- (ins) in the same bottom row to the left; WPN (cycle 1-7)
+ *                 above the fly buttons — all in right-thumb reach
+ *   top-right:    one row of infrequent keys: ESC, MAP, ART (enter), ], [
  *
  * Each control is one {@code place(...)} line; adding a new button means
  * adding one line here.
@@ -55,50 +57,55 @@ public final class TouchControls {
         }
         RelativeLayout root = (RelativeLayout) contentView;
 
+        // ---- bottom-left: joystick with RUN / STR latches right above it ----
         JoystickView joystick = new JoystickView(activity);
         place(root, joystick, activity, SIZE_STICK, SIZE_STICK,
                 Anchor.BOTTOM_LEFT, MARGIN_EDGE, MARGIN_EDGE);
 
-        // ---- top-left column: RUN / STR latches ----
+        int latchRow = MARGIN_EDGE + SIZE_STICK + GAP;
         place(root, button(activity, "RUN", Mode.TOGGLE, KeyEvent.KEYCODE_SHIFT_LEFT),
-                activity, SIZE_LATCH, SIZE_LATCH, Anchor.TOP_LEFT, MARGIN, MARGIN);
+                activity, SIZE_LATCH, SIZE_LATCH, Anchor.BOTTOM_LEFT, MARGIN_EDGE, latchRow);
 
         KeyButtonView strafe = button(activity, "STR", Mode.TOGGLE, -1);
         strafe.setListener((button, active) -> joystick.setStrafeMode(active));
         place(root, strafe, activity, SIZE_LATCH, SIZE_LATCH,
-                Anchor.TOP_LEFT, MARGIN, MARGIN + SIZE_LATCH + GAP);
+                Anchor.BOTTOM_LEFT, MARGIN_EDGE + SIZE_LATCH + GAP, latchRow);
 
-        // ---- top-right rows (right to left): ESC MAP WPN / ] [ ART ----
-        int row2 = MARGIN + SIZE_SMALL + GAP;
+        // ---- bottom-right: action cluster in right-thumb reach ----
+        // Bottom row (right to left): FIRE, F+, F-
+        place(root, button(activity, "FIRE", Mode.HOLD, KeyEvent.KEYCODE_CTRL_LEFT),
+                activity, SIZE_FIRE, SIZE_FIRE, Anchor.BOTTOM_RIGHT, MARGIN_EDGE, MARGIN_EDGE);
+        int flyCol1 = MARGIN_EDGE + SIZE_FIRE + 12;
+        int flyCol2 = flyCol1 + SIZE_FLY + GAP;
+        place(root, button(activity, "F+", Mode.HOLD, KeyEvent.KEYCODE_PAGE_UP),
+                activity, SIZE_FLY, SIZE_FLY, Anchor.BOTTOM_RIGHT, flyCol1, MARGIN_EDGE);
+        place(root, button(activity, "F-", Mode.HOLD, KeyEvent.KEYCODE_INSERT),
+                activity, SIZE_FLY, SIZE_FLY, Anchor.BOTTOM_RIGHT, flyCol2, MARGIN_EDGE);
+
+        // Second row: USE above FIRE, WPN above the fly buttons
+        place(root, button(activity, "USE", Mode.HOLD, KeyEvent.KEYCODE_SPACE),
+                activity, SIZE_USE, SIZE_USE, Anchor.BOTTOM_RIGHT,
+                MARGIN_EDGE + (SIZE_FIRE - SIZE_USE) / 2, MARGIN_EDGE + SIZE_FIRE + 12);
+        place(root, new KeyButtonView(activity, "WPN", WEAPON_KEYS),
+                activity, SIZE_SMALL, SIZE_SMALL, Anchor.BOTTOM_RIGHT,
+                flyCol1, MARGIN_EDGE + SIZE_FLY + GAP);
+
+        // ---- top-right row (right to left): rare keys ----
         int col2 = MARGIN + SIZE_SMALL + GAP;
         int col3 = MARGIN + 2 * (SIZE_SMALL + GAP);
+        int col4 = MARGIN + 3 * (SIZE_SMALL + GAP);
+        int col5 = MARGIN + 4 * (SIZE_SMALL + GAP);
 
         place(root, button(activity, "ESC", Mode.TAP, KeyEvent.KEYCODE_ESCAPE),
                 activity, SIZE_SMALL, SIZE_SMALL, Anchor.TOP_RIGHT, MARGIN, MARGIN);
         place(root, button(activity, "MAP", Mode.TAP, KeyEvent.KEYCODE_TAB),
                 activity, SIZE_SMALL, SIZE_SMALL, Anchor.TOP_RIGHT, col2, MARGIN);
-        place(root, new KeyButtonView(activity, "WPN", WEAPON_KEYS),
-                activity, SIZE_SMALL, SIZE_SMALL, Anchor.TOP_RIGHT, col3, MARGIN);
-
-        place(root, button(activity, "]", Mode.TAP, KeyEvent.KEYCODE_RIGHT_BRACKET),
-                activity, SIZE_SMALL, SIZE_SMALL, Anchor.TOP_RIGHT, MARGIN, row2);
-        place(root, button(activity, "[", Mode.TAP, KeyEvent.KEYCODE_LEFT_BRACKET),
-                activity, SIZE_SMALL, SIZE_SMALL, Anchor.TOP_RIGHT, col2, row2);
         place(root, button(activity, "ART", Mode.TAP, KeyEvent.KEYCODE_ENTER),
-                activity, SIZE_SMALL, SIZE_SMALL, Anchor.TOP_RIGHT, col3, row2);
-
-        // ---- bottom-right cluster: FIRE / USE / FLY up / FLY down ----
-        place(root, button(activity, "FIRE", Mode.HOLD, KeyEvent.KEYCODE_CTRL_LEFT),
-                activity, SIZE_FIRE, SIZE_FIRE, Anchor.BOTTOM_RIGHT, MARGIN_EDGE, MARGIN_EDGE);
-        place(root, button(activity, "USE", Mode.HOLD, KeyEvent.KEYCODE_SPACE),
-                activity, SIZE_USE, SIZE_USE, Anchor.BOTTOM_RIGHT,
-                MARGIN_EDGE + SIZE_FIRE + 24, MARGIN_EDGE + 16);
-        place(root, button(activity, "F+", Mode.HOLD, KeyEvent.KEYCODE_PAGE_UP),
-                activity, SIZE_FLY, SIZE_FLY, Anchor.BOTTOM_RIGHT,
-                MARGIN_EDGE + 24, MARGIN_EDGE + SIZE_FIRE + 24);
-        place(root, button(activity, "F-", Mode.HOLD, KeyEvent.KEYCODE_INSERT),
-                activity, SIZE_FLY, SIZE_FLY, Anchor.BOTTOM_RIGHT,
-                MARGIN_EDGE + 24, MARGIN_EDGE + SIZE_FIRE + 92);
+                activity, SIZE_SMALL, SIZE_SMALL, Anchor.TOP_RIGHT, col3, MARGIN);
+        place(root, button(activity, "]", Mode.TAP, KeyEvent.KEYCODE_RIGHT_BRACKET),
+                activity, SIZE_SMALL, SIZE_SMALL, Anchor.TOP_RIGHT, col4, MARGIN);
+        place(root, button(activity, "[", Mode.TAP, KeyEvent.KEYCODE_LEFT_BRACKET),
+                activity, SIZE_SMALL, SIZE_SMALL, Anchor.TOP_RIGHT, col5, MARGIN);
     }
 
     private static KeyButtonView button(Context context, String label, Mode mode, int keyCode) {
