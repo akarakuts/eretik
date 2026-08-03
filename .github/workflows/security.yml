@@ -1,0 +1,82 @@
+# OSV dependency scan + CodeQL on pushes and PRs to main (scheduled weekly).
+# OSV: --allow-no-lockfiles (Gradle project has no lockfile by default).
+# CodeQL: Java only; native crispy-doom tree is fetched for a full assembleDebug.
+# OSV still uploads SARIF to Code Scanning; fail-on-vuln=false avoids failing CI on known CVE noise.
+name: Security
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 12 * * 1"
+
+env:
+  NDK_VERSION: "28.2.13676358"
+
+jobs:
+  osv:
+    name: OSV dependency scan
+    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@v2.3.8
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    with:
+      fail-on-vuln: false
+      scan-args: |-
+        --allow-no-lockfiles
+        --recursive
+        ./
+
+  codeql:
+    name: CodeQL (Java)
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: java-kotlin
+          build-mode: manual
+
+      - name: Setup JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Install Android SDK packages + NDK
+        run: |
+          set -euo pipefail
+          sdkmanager --install \
+            "platforms;android-36" \
+            "build-tools;36.0.0" \
+            "ndk;${NDK_VERSION}"
+
+      - name: Fetch crispy-doom and SDL2 sources
+        run: chmod +x ./scripts/fetch-deps.sh && ./scripts/fetch-deps.sh
+
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@v6
+
+      - name: Build debug (tracing for CodeQL)
+        run: chmod +x ./gradlew && ./gradlew :app:assembleDebug --no-daemon --stacktrace
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4

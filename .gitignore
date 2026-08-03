@@ -1,9 +1,20 @@
 # Build outputs
 .gradle/
 build/
+**/build/
 app/build/
 app/.cxx/
+.externalNativeBuild/
 local.properties
+
+# IDE / editor / agent
+.idea/
+*.iml
+**/*.iml
+.cursor/
+.kotlin/
+AGENTS.md
+docs/STATE.md
 
 # Downloaded dependencies (run scripts/fetch-deps.sh)
 deps/
@@ -13,9 +24,24 @@ crispy-doom/
 # Game data (copyrighted / large)
 wad/*.wad
 wad/*.zip
+wad/*.psp-rip-broken
+
+# Release upload keystore (never commit secrets or binary keystore)
+keystore.properties
+upload-keystore.jks
+*.jks
+*.keystore
 
 # OS
 .DS_Store
+Thumbs.db
 
-# Diagnosis artifacts
-wad/*.psp-rip-broken
+# Logs / heap dumps
+*.log
+*.hprof
+
+# Store screenshots (local / RuStore upload; regenerate as needed)
+/docs/store-screenshots/
+
+# Local venv for icon scripts
+.venv-icon/

@@ -1,0 +1,55 @@
+# Fetch native deps, build debug and release (debug-signed if no keystore).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NDK_VERSION: "28.2.13676358"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: android-actions/setup-android@v4
+
+      - name: Install Android SDK packages + NDK
+        run: |
+          set -euo pipefail
+          sdkmanager --install \
+            "platforms;android-36" \
+            "build-tools;36.0.0" \
+            "ndk;${NDK_VERSION}"
+
+      - name: Fetch crispy-doom and SDL2 sources
+        run: chmod +x ./scripts/fetch-deps.sh && ./scripts/fetch-deps.sh
+
+      - uses: gradle/actions/wrapper-validation@v6
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Assemble debug
+        run: chmod +x ./gradlew && ./gradlew :app:assembleDebug --no-daemon --stacktrace
+
+      - name: Assemble release (unsigned / debug-signed)
+        run: ./gradlew :app:assembleRelease --no-daemon --stacktrace
