@@ -48,6 +48,9 @@ jobs:
         run: chmod +x ./scripts/fetch-deps.sh && ./scripts/fetch-deps.sh
 
       - uses: gradle/actions/setup-gradle@v6
+        with:
+          # Project wrapper already validated above; SDL sample wrappers are removed in fetch-deps.
+          validate-wrappers: false
 
       - name: Assemble debug
         run: chmod +x ./gradlew && ./gradlew :app:assembleDebug --no-daemon --stacktrace

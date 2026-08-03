@@ -25,4 +25,10 @@ ln -sfn "../../../../deps/SDL2_mixer-$MIXER_VER" "$JNI/SDL2_mixer"
 ln -sfn "../../../../deps/SDL2_net-$NET_VER"     "$JNI/SDL2_net"
 ln -sfn "../../../../crispy-doom"                "$JNI/crispy-doom"
 
+# SDL2 ships a sample android-project with its own gradle-wrapper.jar; unused by
+# ndk-build and trips GitHub Actions wrapper validation. Remove it after unpack.
+rm -rf deps/SDL2-"$SDL2_VER"/android-project/gradle \
+       deps/SDL2-"$SDL2_VER"/android-project/gradlew \
+       deps/SDL2-"$SDL2_VER"/android-project/gradlew.bat
+
 echo "Готово. Теперь: ./gradlew assembleDebug"
