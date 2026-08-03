@@ -63,7 +63,7 @@ jobs:
 
       # Validate before fetch-deps: SDL2 tarball ships its own unknown gradle-wrapper.jar.
       - name: Validate Gradle wrapper
-        uses: gradle/actions/wrapper-validation@v6
+        uses: gradle/actions/wrapper-validation@v6.2.0
 
       - name: Install Android SDK packages + NDK
         run: |
