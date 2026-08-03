@@ -14,7 +14,7 @@ Russian / Русский: [README.ru.md](README.ru.md)
 | | |
 |---|---|
 | Package | `com.eretik.heretic` |
-| Version | `1.1.0` (see `app/build.gradle.kts`) |
+| Version | `1.1.1` (see `app/build.gradle.kts`) |
 | Engine | Crispy Heretic (`crispy-doom` git master) |
 | Orientation | Landscape |
 

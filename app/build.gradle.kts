@@ -7,6 +7,10 @@ plugins {
 val keystorePropertiesFile = rootProject.file("keystore.properties")
 val hasUploadKeystore: Boolean = keystorePropertiesFile.exists()
 
+// Shareware IWAD (freely redistributable). Copied into assets when present under wad/.
+val bundledIwad = rootProject.file("wad/heretic1.wad")
+val assetsIwad = file("src/main/assets/heretic1.wad")
+
 android {
     namespace = "com.eretik.heretic"
     compileSdk = 36
@@ -16,8 +20,8 @@ android {
         applicationId = "com.eretik.heretic"
         minSdk = 21
         targetSdk = 36
-        versionCode = 2
-        versionName = "1.1.0"
+        versionCode = 3
+        versionName = "1.1.1"
 
         ndk {
             abiFilters += listOf("arm64-v8a", "armeabi-v7a")
@@ -67,4 +71,24 @@ android {
             path = File("src/main/jni/Android.mk")
         }
     }
+}
+
+val copyBundledIwad by tasks.registering(Copy::class) {
+    description = "Copy wad/heretic1.wad into assets when available (local / RuStore builds)."
+    from(bundledIwad)
+    into(file("src/main/assets"))
+    rename { "heretic1.wad" }
+    onlyIf { bundledIwad.isFile && bundledIwad.length() > 1_000_000L }
+    doFirst {
+        file("src/main/assets").mkdirs()
+    }
+    doLast {
+        if (assetsIwad.isFile) {
+            logger.lifecycle("Bundled IWAD asset: ${assetsIwad.length()} bytes")
+        }
+    }
+}
+
+tasks.named("preBuild").configure {
+    dependsOn(copyBundledIwad)
 }

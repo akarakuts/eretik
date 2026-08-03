@@ -21,10 +21,11 @@ deps/
 chocolate-doom/
 crispy-doom/
 
-# Game data (copyrighted / large)
+# Game data (copyrighted / large). Bundled into assets at build time from wad/.
 wad/*.wad
 wad/*.zip
 wad/*.psp-rip-broken
+app/src/main/assets/*.wad
 
 # Release upload keystore (never commit secrets or binary keystore)
 keystore.properties

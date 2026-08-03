@@ -23,13 +23,12 @@ import org.libsdl.app.SDLActivity;
 import java.io.File;
 
 /**
- * Heretic (Chocolate Heretic) launcher activity.
+ * Heretic (Crispy Heretic) launcher activity.
  *
- * The game IWAD must be placed into the app files directory, e.g. via:
- *   adb push heretic1.wad /data/local/tmp/
- *   adb shell "run-as com.eretik.heretic sh -c 'cat /data/local/tmp/heretic1.wad > files/heretic1.wad'"
- * (debug builds), or dropped into /sdcard/Android/data/com.eretik.heretic/files/
- * from where it is imported automatically at first start.
+ * IWAD resolution order: internal files → app external files dir → bundled
+ * asset (shareware {@code heretic1.wad} when present in the APK).
+ * A retail {@code heretic.wad} may still be dropped into
+ * {@code /sdcard/Android/data/com.eretik.heretic/files/}.
  */
 public class HereticActivity extends SDLActivity {
 
@@ -47,7 +46,7 @@ public class HereticActivity extends SDLActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        IwadLocator.importFromExternalIfPresent(this);
+        IwadLocator.ensureIwad(this);
         super.onCreate(savedInstanceState);
         TouchControls.setup(this);
     }

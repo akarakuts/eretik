@@ -14,7 +14,7 @@ English: [README.md](README.md)
 | | |
 |---|---|
 | Пакет | `com.eretik.heretic` |
-| Версия | `1.1.0` (см. `app/build.gradle.kts`) |
+| Версия | `1.1.1` (см. `app/build.gradle.kts`) |
 | Движок | Crispy Heretic (`crispy-doom` git master) |
 | Ориентация | Landscape |
 
