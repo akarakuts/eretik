@@ -32,7 +32,7 @@ jobs:
           java-version: 21
 
       # Validate before fetch-deps: SDL2 tarball ships its own unknown gradle-wrapper.jar.
-      - uses: gradle/actions/wrapper-validation@v6
+      - uses: gradle/actions/wrapper-validation@v6.2.0
 
       - uses: android-actions/setup-android@v4
 
@@ -47,7 +47,7 @@ jobs:
       - name: Fetch crispy-doom and SDL2 sources
         run: chmod +x ./scripts/fetch-deps.sh && ./scripts/fetch-deps.sh
 
-      - uses: gradle/actions/setup-gradle@v6
+      - uses: gradle/actions/setup-gradle@v6.2.0
         with:
           # Project wrapper already validated above; SDL sample wrappers are removed in fetch-deps.
           validate-wrappers: false
