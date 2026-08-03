@@ -54,8 +54,8 @@ jobs:
             echo 'See README: "Release signing".'
             exit 1
           fi
-          echo "$KEYSTORE_B64" | base64 -d > "$GITHUB_WORKSPACE/upload-keystore.jks"
           python3 <<'PY'
+          import base64
           import os
           from pathlib import Path
 
@@ -79,6 +79,8 @@ jobs:
               return "".join(out)
 
           root = Path(os.environ["GITHUB_WORKSPACE"])
+          raw = "".join(os.environ["KEYSTORE_B64"].split())
+          (root / "upload-keystore.jks").write_bytes(base64.b64decode(raw))
           lines = [
               "storeFile=upload-keystore.jks",
               "storePassword=" + escape_java_properties_value(os.environ["STORE_PASSWORD"]),
@@ -94,6 +96,10 @@ jobs:
           distribution: temurin
           java-version: 21
 
+      # Validate before fetch-deps: SDL2 tarball ships its own unknown gradle-wrapper.jar.
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@v6
+
       - name: Android SDK
         uses: android-actions/setup-android@v4
 
@@ -107,9 +113,6 @@ jobs:
 
       - name: Fetch crispy-doom and SDL2 sources
         run: chmod +x ./scripts/fetch-deps.sh && ./scripts/fetch-deps.sh
-
-      - name: Validate Gradle wrapper
-        uses: gradle/actions/wrapper-validation@v6
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v6

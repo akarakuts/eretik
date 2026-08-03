@@ -61,6 +61,10 @@ jobs:
       - name: Android SDK
         uses: android-actions/setup-android@v4
 
+      # Validate before fetch-deps: SDL2 tarball ships its own unknown gradle-wrapper.jar.
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@v6
+
       - name: Install Android SDK packages + NDK
         run: |
           set -euo pipefail
@@ -71,9 +75,6 @@ jobs:
 
       - name: Fetch crispy-doom and SDL2 sources
         run: chmod +x ./scripts/fetch-deps.sh && ./scripts/fetch-deps.sh
-
-      - name: Validate Gradle wrapper
-        uses: gradle/actions/wrapper-validation@v6
 
       - name: Build debug (tracing for CodeQL)
         run: chmod +x ./gradlew && ./gradlew :app:assembleDebug --no-daemon --stacktrace
